@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: pr_merge_rate
+    description: "Overall pull request merge metrics for the repository."
+
+    columns:
+      - name: total_prs
+        description: "Total number of pull requests."
+        data_tests:
+          - not_null
+
+      - name: merged_prs
+        description: "Number of pull requests that have been merged."
+        data_tests:
+          - not_null
+
+      - name: merge_rate
+        description: "Percentage of pull requests that have been merged."
+        data_tests:
+          - not_null
