@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: github
+    database: github_analytics
+    schema: public
+
+    tables:
+      - name: issues
+      - name: contributors
+      - name: labels
+      - name: issue_labels
