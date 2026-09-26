@@ -62,14 +62,7 @@ def insert_issues(connection, issues):
     cursor.close()
 
 def get_last_updated_at():
-    connection = psycopg2.connect(
-        host="localhost",
-        port=5432,
-        database="github_analytics",
-        user="postgres",
-        password="postgres"
-    )
-
+    connection = get_connection()
     cursor = connection.cursor()
     cursor.execute("""
         SELECT last_updated_at
@@ -83,14 +76,7 @@ def get_last_updated_at():
     return result[0] if result else None
 
 def update_last_updated_at(timestamp):
-    connection = psycopg2.connect(
-        host="localhost",
-        port=5432,
-        database="github_analytics",
-        user="postgres",
-        password="postgres"
-    )
-
+    connection = get_connection()
     cursor = connection.cursor()
     cursor.execute("""
         UPDATE pipeline_state

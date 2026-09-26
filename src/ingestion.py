@@ -34,39 +34,46 @@ headers = {
 last_updated_at = get_last_updated_at()
 extraction_started_at = datetime.now(timezone.utc)
 
-page = 1
+url = "https://api.github.com/repos/facebook/react/issues"
+params = {
+    "state": "all",
+    "per_page": 100,
+}
+
+if last_updated_at:
+    since = last_updated_at - timedelta(minutes=1)
+    params["since"] = since.isoformat()
+
 all_issues = []
 
-while True:
-    if last_updated_at:
-        since = last_updated_at - timedelta(minutes=1)
-
-        url = (
-            f"https://api.github.com/repos/facebook/react/issues"
-            f"?state=all&per_page=100&page={page}"
-            f"&since={since.isoformat()}"
-        )
-    else:
-        url = (
-            f"https://api.github.com/repos/facebook/react/issues"
-            f"?state=all&per_page=100&page={page}"
-        )
-
+while url:
     print(f"Requesting: {url}")
 
-    response = requests.get(url, headers=headers)
+    response = requests.get(
+        url,
+        headers=headers,
+        params=params,
+    )
 
     if response.status_code != 200:
         raise Exception(
-            f"Error fetching issues: {response.status_code}"
+            f"Error fetching issues: {response.status_code} "
+            f"{response.text}"
         )
+
     issues = response.json()
     all_issues.extend(issues)
 
-    if len(issues) < 100:
-        break
+    url = None
+    params = {}
 
-    page += 1
+    link_header = response.headers.get("Link")
+
+    if link_header:
+        for link in link_header.split(","):
+            if 'rel="next"' in link:
+                url = link.split(";")[0].strip("<> ")
+                break
 
 # TRANSFORM
 clean_issues = []
@@ -111,14 +118,24 @@ for issue in all_issues:
         "login": issue["user"]["login"],
     })
 
+    if issue["closed_by"]:
+        contributors.append({
+            "id": issue["closed_by"]["id"],
+            "login": issue["closed_by"]["login"],
+        })
+
 # LOAD
 connection = get_connection()
+
 try:
     insert_contributors(connection, contributors)
     insert_issues(connection, clean_issues)
     insert_labels(connection, issue_labels)
+
     issue_ids = [issue["id"] for issue in clean_issues]
+
     insert_issue_labels(connection, issue_ids, issue_labels)
+
     connection.commit()
 
 except Exception:
@@ -130,7 +147,6 @@ finally:
 
 # UPDATE WATERMARK
 update_last_updated_at(extraction_started_at)
-
 
 print(f"Total issues fetched: {len(all_issues)}")
 print(f"Processed {len(clean_issues)} issues")
