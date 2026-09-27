@@ -78,16 +78,18 @@ def get_last_updated_at():
 def update_last_updated_at(timestamp):
     connection = get_connection()
     cursor = connection.cursor()
+
     cursor.execute("""
-        UPDATE pipeline_state
-        SET last_updated_at = %s
-        WHERE pipeline_name = 'github_issues'
+        INSERT INTO pipeline_state (pipeline_name, last_updated_at)
+        VALUES ('github_issues', %s)
+        ON CONFLICT (pipeline_name)
+        DO UPDATE SET
+            last_updated_at = EXCLUDED.last_updated_at
     """, (timestamp,))
 
     connection.commit()
     cursor.close()
     connection.close()
-
 
 def insert_labels(connection, labels):
     cursor = connection.cursor()
